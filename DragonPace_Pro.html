@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>DragonPace Pro Mobile</title>
+    
+    <!-- App Icon -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%23121212'/%3E%3Cpath d='M256 120 C180 120 120 180 120 256 C120 332 180 392 256 392 C332 392 392 332 392 256 C392 180 332 120 256 120 Z M256 160 C309 160 352 203 352 256 C352 309 309 352 256 352 C203 352 160 309 160 256 C160 203 203 160 256 160 Z M256 180 V256 L310 310' fill='%23ccff00'/%3E%3C/svg%3E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Fonts & Tailwind -->
+    <link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@300;400;700;900&family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ccff00",
+                        "primary-dark": "#b3e600",
+                        "background-dark": "#000000",
+                        "surface-dark": "#1e1e1e", 
+                        "accent-red": "#ff3333",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"],
+                        "mono": ["Chivo Mono", "monospace"]
+                    },
+                    boxShadow: {
+                        'neon': '0 0 10px rgba(204, 255, 0, 0.3), 0 0 20px rgba(204, 255, 0, 0.1)',
+                        'neon-text': '0 0 8px rgba(204, 255, 0, 0.5)',
+                        'neon-red': '0 0 10px rgba(255, 51, 51, 0.3)',
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(30, 30, 30, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .timer-font {
+            font-family: 'Chivo Mono', monospace; 
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.03em;
+        }
+
+        .dashboard-grid-bg {
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: center top;
+        }
+
+        #settings-modal {
+            transition: opacity 0.2s ease, visibility 0.2s;
+        }
+        #settings-modal.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        #settings-modal:not(.hidden) {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-white font-display h-[100dvh] flex flex-col overflow-hidden selection:bg-primary selection:text-background-dark select-none touch-none">
+
+<!-- Header (Compact: h-12) -->
+<header class="relative z-20 w-full border-b border-white/10 bg-surface-dark/90 backdrop-blur-md h-12 flex-shrink-0">
+    <div class="px-4 h-full flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded bg-primary flex items-center justify-center text-background-dark">
+                <span class="material-symbols-outlined text-sm font-bold">rowing</span>
+            </div>
+            <h1 class="font-bold text-sm tracking-wide uppercase">DragonPace <span class="text-primary">Pro</span></h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <div id="gps-badge" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/5 border border-white/10">
+                <span class="material-symbols-outlined text-white/30 text-[10px]" id="gps-icon">satellite_alt</span>
+                <div class="flex gap-0.5 items-end h-2" id="gps-bars">
+                    <div class="w-0.5 h-1 bg-white/20"></div>
+                    <div class="w-0.5 h-1.5 bg-white/20"></div>
+                    <div class="w-0.5 h-2 bg-white/20"></div>
+                </div>
+            </div>
+            <button onclick="toggleSettings()" class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 active:bg-white/20 text-white/70">
+                <span class="material-symbols-outlined text-lg">settings</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-[calc(100dvh-48px)] relative">
+    
+    <!-- Top Section: Dashboard -->
+    <div class="flex-[2] dashboard-grid-bg flex flex-col p-4 gap-2 relative z-10 min-h-0">
+        
+        <!-- Timer -->
+        <div class="flex-1 flex flex-col items-center justify-center min-h-0">
+            <div class="text-xs text-white/40 font-medium uppercase tracking-[0.2em] mb-1">Duration</div>
+            <!-- Unified Color: text-primary for the whole block -->
+            <div class="timer-font font-bold text-primary tracking-tighter drop-shadow-neon-text flex items-baseline justify-center leading-none w-full text-center">
+                <!-- Removed fixed width constraints, using flex layout -->
+                <span id="timer-main" class="text-6xl min-[400px]:text-7xl">00:00</span>
+                <span id="timer-ms" class="text-4xl min-[400px]:text-5xl ml-1">.00</span>
+            </div>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="grid grid-cols-2 gap-3 w-full">
+            <div class="glass-panel rounded-xl p-3 flex flex-col items-start relative">
+                <span class="text-white/40 text-[10px] font-bold uppercase tracking-wider">Distance</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <span id="dist-val" class="text-3xl font-bold text-white tracking-tight timer-font leading-none">0</span>
+                    <span class="text-xs text-white/60 font-medium">m</span>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-xl p-3 flex flex-col items-start relative">
+                <span class="text-white/40 text-[10px] font-bold uppercase tracking-wider">Speed</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <span id="speed-val" class="text-3xl font-bold text-white tracking-tight timer-font leading-none">0.0</span>
+                    <span class="text-xs text-white/60 font-medium">km/h</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons Row -->
+        <div class="flex gap-3 w-full mt-1">
+            <button onclick="resetTimer()" class="flex-1 bg-surface-dark hover:bg-white/10 border border-white/20 text-white font-bold py-3 rounded-xl active:scale-[0.98] flex items-center justify-center gap-1 uppercase tracking-wider text-sm transition-all">
+                <span class="material-symbols-outlined text-lg">restart_alt</span>
+                Reset
+            </button>
+            <button id="btn-start" onclick="toggleTimer()" class="flex-[2] bg-primary text-background-dark font-bold py-3 rounded-xl shadow-neon active:scale-[0.98] flex items-center justify-center gap-1 uppercase tracking-wider text-sm transition-all">
+                <span class="material-symbols-outlined text-xl" id="icon-start">play_arrow</span>
+                <span id="text-start">Start</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom Section: Pacer Zone -->
+    <div id="pacer-zone" class="flex-[3] bg-surface-dark relative overflow-hidden group cursor-pointer active:brightness-110 transition-all border-t border-white/10" onpointerdown="handlePacerTap()">
+        
+        <div class="absolute inset-0 bg-primary/5 pointer-events-none"></div>
+        <div id="pacer-pulse" class="absolute inset-0 bg-primary/20 opacity-0 transition-opacity duration-100 pointer-events-none z-0"></div>
+        
+        <div class="absolute inset-0 flex items-center justify-center opacity-0 pointer-events-none" id="pacer-ripples">
+            <div class="w-[300px] h-[300px] border border-primary/30 rounded-full absolute animate-[ping_0.8s_linear_one]"></div>
+        </div>
+
+        <div class="relative z-10 flex flex-col h-full p-6 pointer-events-none justify-between">
+            <div class="flex items-center justify-center opacity-60">
+                <div class="bg-black/30 px-3 py-1 rounded-full text-[10px] text-primary font-mono tracking-widest uppercase border border-primary/20" id="tap-instruction">
+                    TAP ANYWHERE TO MEASURE
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center justify-center -mt-4">
+                <div id="spm-val" class="text-[7rem] min-[400px]:text-[8.5rem] leading-none font-bold text-white timer-font drop-shadow-2xl transition-all">
+                    --
+                </div>
+                <div class="text-xl font-bold text-primary tracking-[0.2em] mt-2">SPM</div>
+            </div>
+
+            <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden relative opacity-60 mb-2">
+                <div id="metronome-bar" class="absolute top-0 left-0 bottom-0 w-full bg-primary -translate-x-full transition-transform duration-100 ease-linear"></div>
+                <div class="absolute top-0 left-1/2 bottom-0 w-[1px] bg-white z-10 h-full"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="glass-panel w-full max-w-xs rounded-2xl p-5 shadow-2xl border border-primary/20">
+        <div class="flex justify-between items-center mb-5">
+            <h2 class="text-lg font-bold text-white">Settings</h2>
+            <button onclick="toggleSettings()" class="text-white/50 hover:text-white p-1">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <div class="space-y-3">
+            <p class="text-xs text-white/50 uppercase tracking-wider mb-1 pl-1">Stroke Counting Mode</p>
+            
+            <label class="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 cursor-pointer hover:bg-white/10 active:bg-white/15 transition-colors has-[:checked]:border-primary/50 has-[:checked]:bg-primary/10">
+                <input type="radio" name="mode" value="3" checked class="text-primary focus:ring-primary bg-transparent border-white/30 w-4 h-4" onchange="updateMode(3)">
+                <div class="flex-1">
+                    <span class="block text-sm font-bold text-white">Every 3 Strokes</span>
+                    <span class="text-[10px] text-white/50">Steady pace (Long Distance)</span>
+                </div>
+            </label>
+
+            <label class="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 cursor-pointer hover:bg-white/10 active:bg-white/15 transition-colors has-[:checked]:border-primary/50 has-[:checked]:bg-primary/10">
+                <input type="radio" name="mode" value="2" class="text-primary focus:ring-primary bg-transparent border-white/30 w-4 h-4" onchange="updateMode(2)">
+                <div class="flex-1">
+                    <span class="block text-sm font-bold text-white">Every 2 Strokes</span>
+                    <span class="text-[10px] text-white/50">High frequency (Starts/Sprints)</span>
+                </div>
+            </label>
+        </div>
+
+        <button onclick="toggleSettings()" class="w-full mt-5 bg-primary text-black font-bold py-3 rounded-xl uppercase tracking-wider hover:bg-primary-dark transition-colors text-sm">
+            Close
+        </button>
+    </div>
+</div>
+
+<script>
+    const state = {
+        mode: 3, 
+        timer: { running: false, startTime: 0, elapsedTime: 0 },
+        gps: {
+            active: false, ready: false,
+            lat: null, lon: null, lastValidLat: null, lastValidLon: null,
+            totalDistance: 0, currentSpeed: 0, accuracy: 0, signalLevel: 0
+        },
+        pacer: { spm: 0, lastTapTime: 0, tapCount: 0, displayState: 'IDLE' }
+    };
+
+    const els = {
+        timerMain: document.getElementById('timer-main'),
+        timerMs: document.getElementById('timer-ms'),
+        distVal: document.getElementById('dist-val'),
+        speedVal: document.getElementById('speed-val'),
+        spmVal: document.getElementById('spm-val'),
+        btnStart: document.getElementById('btn-start'),
+        textStart: document.getElementById('text-start'),
+        iconStart: document.getElementById('icon-start'),
+        gpsBadge: document.getElementById('gps-badge'),
+        gpsIcon: document.getElementById('gps-icon'),
+        gpsBars: document.getElementById('gps-bars'),
+        pacerZone: document.getElementById('pacer-zone'),
+        pacerPulse: document.getElementById('pacer-pulse'),
+        tapInstruction: document.getElementById('tap-instruction')
+    };
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3;
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                  Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function initGPS() {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    const { latitude, longitude, accuracy, speed } = position.coords;
+                    state.gps.lat = latitude;
+                    state.gps.lon = longitude;
+                    state.gps.accuracy = accuracy;
+                    state.gps.currentSpeed = speed ? (speed * 3.6).toFixed(1) : "0.0"; 
+                    state.gps.signalLevel = accuracy <= 15 ? 2 : (accuracy <= 50 ? 1 : 0);
+                    state.gps.ready = true;
+
+                    if (state.timer.running && state.gps.signalLevel > 0) {
+                        if (state.gps.lastValidLat === null) {
+                            state.gps.lastValidLat = latitude;
+                            state.gps.lastValidLon = longitude;
+                        } else {
+                            const dist = calculateDistance(state.gps.lastValidLat, state.gps.lastValidLon, latitude, longitude);
+                            if (dist > 3.0) { // 3m Filter
+                                state.gps.totalDistance += dist;
+                                state.gps.lastValidLat = latitude;
+                                state.gps.lastValidLon = longitude;
+                            }
+                        }
+                    }
+                    updateGPSUI();
+                },
+                (err) => { 
+                    state.gps.ready = false; 
+                    state.gps.signalLevel = 0; 
+                    updateGPSUI();
+                },
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+            );
+        }
+    }
+
+    function updateGPSUI() {
+        const bars = els.gpsBars.children;
+        if (!state.gps.ready) {
+            els.gpsIcon.classList.remove('text-primary');
+            els.gpsIcon.classList.add('text-accent-red');
+            bars[0].className = "w-0.5 h-1 bg-white/20";
+            bars[1].className = "w-0.5 h-1.5 bg-white/20";
+            bars[2].className = "w-0.5 h-2 bg-white/20";
+        } else if (state.gps.signalLevel === 2) {
+            els.gpsIcon.className = "material-symbols-outlined text-[10px] text-primary";
+            els.gpsBadge.classList.add('border-primary/30', 'bg-primary/10');
+            bars[0].className = "w-0.5 h-1 bg-primary";
+            bars[1].className = "w-0.5 h-1.5 bg-primary";
+            bars[2].className = "w-0.5 h-2 bg-primary";
+        } else {
+            els.gpsIcon.className = "material-symbols-outlined text-[10px] text-yellow-500";
+            bars[0].className = "w-0.5 h-1 bg-yellow-500";
+            bars[1].className = "w-0.5 h-1.5 bg-yellow-500";
+            bars[2].className = "w-0.5 h-2 bg-white/20";
+        }
+    }
+
+    function toggleTimer() {
+        if (state.timer.running) {
+            state.timer.running = false;
+            state.timer.elapsedTime = Date.now() - state.timer.startTime;
+            els.btnStart.classList.remove('bg-accent-red', 'text-white');
+            els.btnStart.classList.add('bg-primary', 'text-background-dark');
+            els.textStart.innerText = "RESUME";
+            els.iconStart.innerText = "play_arrow";
+        } else {
+            state.timer.running = true;
+            state.timer.startTime = Date.now() - state.timer.elapsedTime;
+            state.gps.lastValidLat = state.gps.lat;
+            state.gps.lastValidLon = state.gps.lon;
+            
+            els.btnStart.classList.remove('bg-primary', 'text-background-dark');
+            els.btnStart.classList.add('bg-accent-red', 'text-white');
+            els.textStart.innerText = "STOP";
+            els.iconStart.innerText = "stop";
+        }
+    }
+
+    function resetTimer() {
+        state.timer.running = false;
+        state.timer.elapsedTime = 0;
+        state.gps.totalDistance = 0;
+        state.gps.lastValidLat = null;
+        state.gps.lastValidLon = null;
+        
+        els.btnStart.classList.remove('bg-accent-red', 'text-white');
+        els.btnStart.classList.add('bg-primary', 'text-background-dark');
+        els.textStart.innerText = "START";
+        els.iconStart.innerText = "play_arrow";
+        
+        updateUI();
+    }
+
+    function handlePacerTap() {
+        const pulse = els.pacerPulse;
+        pulse.style.opacity = '1';
+        setTimeout(() => pulse.style.opacity = '0', 100);
+
+        const ripples = document.getElementById('pacer-ripples');
+        const newRipple = ripples.cloneNode(true);
+        newRipple.style.opacity = '1';
+        els.pacerZone.appendChild(newRipple);
+        setTimeout(() => newRipple.remove(), 800);
+
+        if (navigator.vibrate) navigator.vibrate(40);
+
+        const now = Date.now();
+        if (now - state.pacer.lastTapTime < 200) return; 
+        if (now - state.pacer.lastTapTime > 10000) state.pacer.tapCount = 0; 
+
+        if (state.pacer.tapCount === 0) {
+            state.pacer.tapCount = 1;
+            state.pacer.lastTapTime = now;
+            els.spmVal.innerText = "RDY";
+            els.spmVal.classList.add('text-primary');
+            els.spmVal.classList.remove('text-white');
+            els.spmVal.style.fontSize = "5rem";
+            els.tapInstruction.innerText = `COUNT ${state.mode}...`;
+        } else {
+            const deltaSec = (now - state.pacer.lastTapTime) / 1000;
+            const rawSpm = (60 / deltaSec) * state.mode;
+            state.pacer.spm = Math.round(rawSpm);
+            state.pacer.lastTapTime = now;
+            
+            els.spmVal.innerText = state.pacer.spm;
+            els.spmVal.classList.remove('text-primary');
+            els.spmVal.classList.add('text-white');
+            els.spmVal.style.fontSize = ""; 
+            els.tapInstruction.innerText = "TAP TO SYNC";
+        }
+    }
+
+    function updateUI() {
+        let rawTime = state.timer.running ? (Date.now() - state.timer.startTime) : state.timer.elapsedTime;
+        const date = new Date(rawTime);
+        const m = String(date.getUTCMinutes()).padStart(2, '0');
+        const s = String(date.getUTCSeconds()).padStart(2, '0');
+        const ms = String(Math.floor(date.getUTCMilliseconds() / 10)).padStart(2, '0');
+        
+        els.timerMain.innerText = `${m}:${s}`;
+        els.timerMs.innerText = `.${ms}`;
+
+        els.distVal.innerText = state.gps.totalDistance.toFixed(0);
+        els.speedVal.innerText = state.gps.currentSpeed;
+
+        requestAnimationFrame(updateUI);
+    }
+
+    function toggleSettings() {
+        const modal = document.getElementById('settings-modal');
+        modal.classList.toggle('hidden');
+    }
+
+    function updateMode(n) {
+        state.mode = n;
+        state.pacer.tapCount = 0;
+        els.spmVal.innerText = "--";
+        els.tapInstruction.innerText = `MODE: ${n}-STROKE`;
+    }
+
+    initGPS();
+    requestAnimationFrame(updateUI);
+
+</script>
+</body>
+</html>
